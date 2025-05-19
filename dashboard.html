@@ -3,34 +3,48 @@
 <head>
   <title>Jump Game Dashboard</title>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin: 50px;
+      background-color: #f0f0f0;
+      padding: 50px;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
+    #loginBtn, #logoutBtn {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
     }
     #points {
       font-size: 24px;
       color: green;
-      margin-top: 30px;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>🎮 Jump Game Rewards Dashboard</h1>
+    <p id="userEmail">Please login to view your points.</p>
+    <div id="points">Points: --</div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
 
-  <h1>Welcome to Jump Game Dashboard</h1>
-  <p>यहां आप अपने पॉइंट्स देख सकते हैं।</p>
-
-  <div id="points">Loading...</div>
-
-  <!-- Firebase SDK Scripts -->
+  <!-- Firebase SDKs -->
   <script type="module">
-    // Firebase SDKs import करें
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-    // आपकी Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBTYElsaAhqMkjEaXvPeBm8oLTAzi6lb28",
       authDomain: "jumpgamerewards.firebaseapp.com",
@@ -41,26 +55,51 @@
       appId: "1:956249211860:web:457c5058fdeb9be1fa0c41"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getDatabase();
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    const database = getDatabase(app);
 
-    // यूज़र लॉगिन है या नहीं चेक करें
-    onAuthStateChanged(auth, (user) => {
-      const pointDiv = document.getElementById("points");
-      if (user) {
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userEmail = document.getElementById('userEmail');
+    const pointsDisplay = document.getElementById('points');
+
+    loginBtn.onclick = () => {
+      signInWithPopup(auth, provider).then((result) => {
+        const user = result.user;
         const uid = user.uid;
-        const pointRef = ref(db, 'users/' + uid + '/points');
-        onValue(pointRef, (snapshot) => {
-          const points = snapshot.val() || 0;
-          pointDiv.innerText = `आपके पॉइंट्स: ${points}`;
+        const userRef = ref(database, 'users/' + uid);
+        get(userRef).then(snapshot => {
+          if (!snapshot.exists()) {
+            set(userRef, { points: 0 });
+          }
+        });
+      });
+    };
+
+    logoutBtn.onclick = () => {
+      signOut(auth);
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userEmail.textContent = "Welcome: " + user.email;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        const uid = user.uid;
+        const userRef = ref(database, 'users/' + uid + '/points');
+        get(userRef).then(snapshot => {
+          const points = snapshot.exists() ? snapshot.val() : 0;
+          pointsDisplay.textContent = "Points: " + points;
         });
       } else {
-        pointDiv.innerText = "कृपया पहले लॉगिन करें।";
+        userEmail.textContent = "Please login to view your points.";
+        pointsDisplay.textContent = "Points: --";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
       }
     });
   </script>
-
 </body>
 </html>
