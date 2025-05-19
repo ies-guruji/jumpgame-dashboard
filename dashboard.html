@@ -1,14 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Game Dashboard</title>
-  <script type="module">
-    // Firebase imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  <title>Jump Game Dashboard</title>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    #points {
+      font-size: 24px;
+      color: green;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
 
-    // Your Firebase config
+  <h1>Welcome to Jump Game Dashboard</h1>
+  <p>यहां आप अपने पॉइंट्स देख सकते हैं।</p>
+
+  <div id="points">Loading...</div>
+
+  <!-- Firebase SDK Scripts -->
+  <script type="module">
+    // Firebase SDKs import करें
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    // आपकी Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBTYElsaAhqMkjEaXvPeBm8oLTAzi6lb28",
       authDomain: "jumpgamerewards.firebaseapp.com",
@@ -21,60 +43,24 @@
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
+    const auth = getAuth();
+    const db = getDatabase();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const userInfo = document.getElementById("userInfo");
-    const pointsDisplay = document.getElementById("points");
-
-    loginBtn.addEventListener("click", () => {
-      const provider = new GoogleAuthProvider();
-      signInWithPopup(auth, provider)
-        .then((result) => {
-          const user = result.user;
-          const userRef = ref(db, 'users/' + user.uid);
-
-          get(userRef).then((snapshot) => {
-            if (!snapshot.exists()) {
-              // First time user, set points to 0
-              set(userRef, {
-                name: user.displayName,
-                email: user.email,
-                points: 0
-              });
-            }
-          });
-        })
-        .catch((error) => {
-          console.error("Login Error:", error);
-        });
-    });
-
+    // यूज़र लॉगिन है या नहीं चेक करें
     onAuthStateChanged(auth, (user) => {
+      const pointDiv = document.getElementById("points");
       if (user) {
-        userInfo.innerHTML = `Hello, <b>${user.displayName}</b><br>Email: ${user.email}`;
-        const userPointsRef = ref(db, 'users/' + user.uid + '/points');
-        get(userPointsRef).then((snapshot) => {
-          if (snapshot.exists()) {
-            pointsDisplay.innerText = "Points: " + snapshot.val();
-          } else {
-            pointsDisplay.innerText = "Points: 0";
-          }
+        const uid = user.uid;
+        const pointRef = ref(db, 'users/' + uid + '/points');
+        onValue(pointRef, (snapshot) => {
+          const points = snapshot.val() || 0;
+          pointDiv.innerText = `आपके पॉइंट्स: ${points}`;
         });
+      } else {
+        pointDiv.innerText = "कृपया पहले लॉगिन करें।";
       }
     });
   </script>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #loginBtn { padding: 10px 20px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    #points { margin-top: 15px; font-size: 20px; }
-  </style>
-</head>
-<body>
-  <h2>🎮 Welcome to Jump Game Dashboard</h2>
-  <button id="loginBtn">Login with Google</button>
-  <div id="userInfo"></div>
-  <div id="points"></div>
+
 </body>
 </html>
