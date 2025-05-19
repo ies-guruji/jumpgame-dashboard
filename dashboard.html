@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Game Dashboard</title>
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBTYElsaAhqMkjEaXvPeBm8oLTAzi6lb28",
+      authDomain: "jumpgamerewards.firebaseapp.com",
+      databaseURL: "https://jumpgamerewards-default-rtdb.firebaseio.com",
+      projectId: "jumpgamerewards",
+      storageBucket: "jumpgamerewards.appspot.com",
+      messagingSenderId: "956249211860",
+      appId: "1:956249211860:web:457c5058fdeb9be1fa0c41"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    const loginBtn = document.getElementById("loginBtn");
+    const userInfo = document.getElementById("userInfo");
+    const pointsDisplay = document.getElementById("points");
+
+    loginBtn.addEventListener("click", () => {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          const user = result.user;
+          const userRef = ref(db, 'users/' + user.uid);
+
+          get(userRef).then((snapshot) => {
+            if (!snapshot.exists()) {
+              // First time user, set points to 0
+              set(userRef, {
+                name: user.displayName,
+                email: user.email,
+                points: 0
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Login Error:", error);
+        });
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userInfo.innerHTML = `Hello, <b>${user.displayName}</b><br>Email: ${user.email}`;
+        const userPointsRef = ref(db, 'users/' + user.uid + '/points');
+        get(userPointsRef).then((snapshot) => {
+          if (snapshot.exists()) {
+            pointsDisplay.innerText = "Points: " + snapshot.val();
+          } else {
+            pointsDisplay.innerText = "Points: 0";
+          }
+        });
+      }
+    });
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #loginBtn { padding: 10px 20px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    #points { margin-top: 15px; font-size: 20px; }
+  </style>
+</head>
+<body>
+  <h2>🎮 Welcome to Jump Game Dashboard</h2>
+  <button id="loginBtn">Login with Google</button>
+  <div id="userInfo"></div>
+  <div id="points"></div>
+</body>
+</html>
